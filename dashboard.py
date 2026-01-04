@@ -27,6 +27,17 @@ import ollama
 from PIL import Image, ImageEnhance, ImageFilter
 import cv2
 import io
+import pydicom
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image as RLImage, Table, TableStyle
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.lib import colors
+from skimage.filters import sobel
+from skimage import exposure
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -107,7 +118,7 @@ with st.sidebar:
     st.title("🎯 Control Panel")
     
     # App Mode Selection
-    app_mode = st.selectbox("Select Mode", ["🏥 Clinical Analysis", "📸 Image Analysis", "🤖 Dr. AI Assistant", "🌐 Federated Learning"])
+    app_mode = st.selectbox("Select Mode", ["🏥 Clinical Analysis", "📸 Image Analysis", "🔬 Combined Analysis", "🤖 Dr. AI Assistant", "📊 Patient History", "🌐 Federated Learning"])
     
     st.markdown("---")
     
@@ -573,6 +584,320 @@ Please provide a detailed, structured analysis. Be specific with measurements an
         
         return fig
 
+# Survival Probability Calculator
+class SurvivalCalculator:
+    def __init__(self):
+        # Evidence-based 5-year survival rates by stage
+        self.breast_cancer_survival = {
+            'Stage 0': 0.99,
+            'Stage I': 0.99,
+            'Stage II': 0.93,
+            'Stage III': 0.72,
+            'Stage IV': 0.22,
+            'Unknown': 0.50
+        }
+        
+        self.lung_cancer_survival = {
+            'Stage 0': 0.90,
+            'Stage I': 0.68,
+            'Stage II': 0.53,
+            'Stage III': 0.26,
+            'Stage IV': 0.06,
+            'Unknown': 0.30
+        }
+    
+    def calculate_survival(self, cancer_type, stage, age=None, additional_factors=None):
+        """Calculate 5-year survival probability with risk modifiers"""
+        # Base survival rate
+        if 'breast' in cancer_type.lower():
+            base_rate = self.breast_cancer_survival.get(stage, 0.50)
+        elif 'lung' in cancer_type.lower():
+            base_rate = self.lung_cancer_survival.get(stage, 0.30)
+        else:
+            base_rate = 0.50
+        
+        # Age adjustment
+        age_modifier = 1.0
+        if age:
+            if age < 50:
+                age_modifier = 1.1  # Better prognosis
+            elif age > 70:
+                age_modifier = 0.9  # Worse prognosis
+        
+        # Additional risk factors
+        risk_modifier = 1.0
+        if additional_factors:
+            if additional_factors.get('smoking'):
+                risk_modifier *= 0.85
+            if additional_factors.get('comorbidities'):
+                risk_modifier *= 0.90
+            if additional_factors.get('good_performance_status'):
+                risk_modifier *= 1.1
+        
+        adjusted_rate = min(0.99, base_rate * age_modifier * risk_modifier)
+        
+        return {
+            'five_year_survival': adjusted_rate,
+            'one_year_survival': min(0.99, adjusted_rate + 0.15),
+            'ten_year_survival': max(0.05, adjusted_rate - 0.15),
+            'risk_category': self._get_risk_category(adjusted_rate)
+        }
+    
+    def _get_risk_category(self, survival_rate):
+        if survival_rate >= 0.75:
+            return 'Low Risk'
+        elif survival_rate >= 0.50:
+            return 'Intermediate Risk'
+        else:
+            return 'High Risk'
+
+# Treatment Pathway Generator
+class TreatmentPathwayGenerator:
+    def __init__(self):
+        self.breast_treatments = {
+            'Stage 0': {
+                'surgery': 'Lumpectomy or Mastectomy',
+                'radiation': 'May be recommended after lumpectomy',
+                'chemotherapy': 'Usually not needed',
+                'hormone_therapy': 'For hormone receptor-positive',
+                'targeted_therapy': 'Not typically used',
+                'follow_up': 'Mammogram every 6-12 months'
+            },
+            'Stage I': {
+                'surgery': 'Lumpectomy with sentinel lymph node biopsy',
+                'radiation': 'Recommended after lumpectomy',
+                'chemotherapy': 'May be recommended based on tumor features',
+                'hormone_therapy': 'For hormone receptor-positive (5-10 years)',
+                'targeted_therapy': 'Trastuzumab if HER2-positive',
+                'follow_up': 'Every 3-6 months for 3 years, then annually'
+            },
+            'Stage II': {
+                'surgery': 'Lumpectomy or mastectomy + axillary lymph node dissection',
+                'radiation': 'Recommended after surgery',
+                'chemotherapy': 'Usually recommended (AC-T, TAC, or TC regimen)',
+                'hormone_therapy': 'For hormone receptor-positive',
+                'targeted_therapy': 'Trastuzumab/Pertuzumab if HER2-positive',
+                'follow_up': 'Every 3-4 months for 2 years, then every 6 months'
+            },
+            'Stage III': {
+                'surgery': 'Mastectomy + axillary lymph node dissection',
+                'radiation': 'Post-mastectomy radiation therapy',
+                'chemotherapy': 'Neoadjuvant + adjuvant chemotherapy',
+                'hormone_therapy': 'Extended duration (10 years)',
+                'targeted_therapy': 'HER2-targeted + CDK4/6 inhibitors',
+                'follow_up': 'Every 3 months for 3 years'
+            },
+            'Stage IV': {
+                'surgery': 'Palliative surgery if needed',
+                'radiation': 'Palliative radiation for symptoms',
+                'chemotherapy': 'Systemic chemotherapy (multiple lines)',
+                'hormone_therapy': 'If hormone receptor-positive',
+                'targeted_therapy': 'Multiple agents based on biomarkers',
+                'immunotherapy': 'For PD-L1 positive triple-negative',
+                'follow_up': 'Continuous monitoring every 2-3 months'
+            }
+        }
+        
+        self.lung_treatments = {
+            'Stage I': {
+                'surgery': 'Lobectomy or segmentectomy',
+                'radiation': 'SBRT if medically inoperable',
+                'chemotherapy': 'Adjuvant chemotherapy may be considered',
+                'targeted_therapy': 'If EGFR/ALK/ROS1 positive',
+                'follow_up': 'CT scans every 6 months for 2 years'
+            },
+            'Stage II': {
+                'surgery': 'Lobectomy + mediastinal lymph node dissection',
+                'radiation': 'Post-operative if positive margins',
+                'chemotherapy': 'Adjuvant platinum-based chemotherapy',
+                'targeted_therapy': 'Based on molecular testing',
+                'follow_up': 'CT every 3-6 months'
+            },
+            'Stage III': {
+                'surgery': 'If resectable after neoadjuvant therapy',
+                'radiation': 'Concurrent chemoradiation',
+                'chemotherapy': 'Platinum-doublet chemotherapy',
+                'immunotherapy': 'Durvalumab consolidation after chemoRT',
+                'targeted_therapy': 'If actionable mutations',
+                'follow_up': 'Every 3 months with imaging'
+            },
+            'Stage IV': {
+                'surgery': 'Not recommended (except palliative)',
+                'radiation': 'Palliative for symptomatic sites',
+                'chemotherapy': 'First-line platinum doublet',
+                'immunotherapy': 'Pembrolizumab/Nivolumab if PD-L1 ≥50%',
+                'targeted_therapy': 'EGFR/ALK/ROS1/BRAF/MET inhibitors',
+                'follow_up': 'Every 6-12 weeks with CT scans'
+            }
+        }
+    
+    def generate_pathway(self, cancer_type, stage):
+        """Generate treatment pathway recommendation"""
+        if 'breast' in cancer_type.lower():
+            treatments = self.breast_treatments.get(stage, {})
+        elif 'lung' in cancer_type.lower():
+            treatments = self.lung_treatments.get(stage, {})
+        else:
+            return {'message': 'Treatment pathways available for Breast and Lung cancer'}
+        
+        return treatments
+
+# Patient History Tracker
+class PatientHistoryTracker:
+    def __init__(self):
+        if 'patient_history' not in st.session_state:
+            st.session_state.patient_history = []
+    
+    def add_record(self, patient_id, analysis_type, results, images=None):
+        """Add analysis record to patient history"""
+        record = {
+            'timestamp': datetime.datetime.now().isoformat(),
+            'patient_id': patient_id,
+            'analysis_type': analysis_type,
+            'results': results,
+            'has_images': images is not None
+        }
+        st.session_state.patient_history.append(record)
+    
+    def get_patient_records(self, patient_id):
+        """Retrieve all records for a patient"""
+        return [r for r in st.session_state.patient_history if r['patient_id'] == patient_id]
+    
+    def export_history_to_excel(self):
+        """Export patient history to Excel"""
+        if not st.session_state.patient_history:
+            return None
+        
+        import pandas as pd
+        df = pd.DataFrame(st.session_state.patient_history)
+        
+        # Flatten nested results
+        if 'results' in df.columns:
+            results_df = pd.json_normalize(df['results'])
+            df = pd.concat([df.drop('results', axis=1), results_df], axis=1)
+        
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False, sheet_name='Patient History')
+        
+        return output.getvalue()
+
+# DICOM Loader
+class DICOMLoader:
+    @staticmethod
+    def load_dicom(file):
+        """Load and convert DICOM file to displayable image"""
+        try:
+            dicom_data = pydicom.dcmread(file)
+            
+            # Extract pixel array
+            img_array = dicom_data.pixel_array
+            
+            # Normalize to 0-255
+            img_array = exposure.rescale_intensity(img_array, out_range=(0, 255))
+            img_array = img_array.astype(np.uint8)
+            
+            # Convert to PIL Image
+            if len(img_array.shape) == 2:
+                image = Image.fromarray(img_array, mode='L')
+            else:
+                image = Image.fromarray(img_array)
+            
+            # Extract metadata
+            metadata = {
+                'Patient Name': str(getattr(dicom_data, 'PatientName', 'N/A')),
+                'Patient ID': str(getattr(dicom_data, 'PatientID', 'N/A')),
+                'Study Date': str(getattr(dicom_data, 'StudyDate', 'N/A')),
+                'Modality': str(getattr(dicom_data, 'Modality', 'N/A')),
+                'Body Part': str(getattr(dicom_data, 'BodyPartExamined', 'N/A')),
+                'Image Type': str(getattr(dicom_data, 'ImageType', 'N/A'))
+            }
+            
+            return image, metadata
+        except Exception as e:
+            return None, {'error': str(e)}
+
+# Enhanced PDF Report Generator with Images
+class EnhancedPDFGenerator:
+    @staticmethod
+    def generate_comprehensive_report(patient_data, clinical_results=None, image_results=None, images=None):
+        """Generate comprehensive PDF report with embedded images"""
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Title
+        title_style = ParagraphStyle('CustomTitle', parent=styles['Heading1'], fontSize=24, textColor=colors.HexColor('#ff4b4b'), alignment=1)
+        story.append(Paragraph("🧬 Multi-Cancer AI Analysis Report", title_style))
+        story.append(Spacer(1, 20))
+        
+        # Patient Information
+        story.append(Paragraph("Patient Information", styles['Heading2']))
+        patient_table_data = [[k, str(v)] for k, v in patient_data.items()]
+        patient_table = Table(patient_table_data, colWidths=[2*inch, 4*inch])
+        patient_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.beige),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+        ]))
+        story.append(patient_table)
+        story.append(Spacer(1, 20))
+        
+        # Clinical Analysis Results
+        if clinical_results:
+            story.append(Paragraph("Clinical Analysis Results", styles['Heading2']))
+            clinical_table_data = [[k, str(v)] for k, v in clinical_results.items()]
+            clinical_table = Table(clinical_table_data, colWidths=[2*inch, 4*inch])
+            clinical_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.lightblue),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            story.append(clinical_table)
+            story.append(Spacer(1, 20))
+        
+        # Image Analysis Results
+        if image_results:
+            story.append(Paragraph("Medical Image Analysis", styles['Heading2']))
+            image_table_data = [[k, str(v)] for k, v in image_results.items() if k != 'full_analysis']
+            image_table = Table(image_table_data, colWidths=[2*inch, 4*inch])
+            image_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgreen),
+                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+            ]))
+            story.append(image_table)
+            story.append(Spacer(1, 20))
+        
+        # Embedded Images
+        if images:
+            story.append(Paragraph("Medical Images", styles['Heading2']))
+            for idx, img in enumerate(images[:4]):  # Max 4 images
+                img_buffer = io.BytesIO()
+                img.save(img_buffer, format='PNG')
+                img_buffer.seek(0)
+                
+                # Resize image to fit page
+                img_width = 4 * inch
+                img_height = 3 * inch
+                rl_img = RLImage(img_buffer, width=img_width, height=img_height)
+                story.append(rl_img)
+                story.append(Spacer(1, 10))
+        
+        # Disclaimer
+        story.append(Spacer(1, 30))
+        disclaimer_style = ParagraphStyle('Disclaimer', parent=styles['Normal'], fontSize=8, textColor=colors.red)
+        story.append(Paragraph("<b>DISCLAIMER:</b> This AI-generated report is for research and educational purposes only. "
+                              "It is NOT a substitute for professional medical diagnosis or treatment. "
+                              "Always consult qualified healthcare professionals for medical decisions.", disclaimer_style))
+        
+        # Build PDF
+        doc.build(story)
+        buffer.seek(0)
+        return buffer.getvalue()
+
 # Federated Learning Simulator
 class FederatedLearningSimulator:
     def __init__(self):
@@ -642,6 +967,10 @@ dr_ai = DrAI()
 image_analyzer = MedicalImageAnalyzer()
 fl_sim = FederatedLearningSimulator()
 pdf_gen = PDFReportGenerator()
+survival_calc = SurvivalCalculator()
+treatment_gen = TreatmentPathwayGenerator()
+history_tracker = PatientHistoryTracker()
+enhanced_pdf = EnhancedPDFGenerator()
 
 # Model Loading and Training Functions
 @st.cache_resource
@@ -1543,6 +1872,385 @@ elif app_mode == "🤖 Dr. AI Assistant":
                 st.markdown(response)
                 
         st.session_state.messages.append({"role": "assistant", "content": response})
+
+elif app_mode == "🔬 Combined Analysis":
+    st.markdown("## 🔬 Comprehensive Multi-Modal Cancer Analysis")
+    st.markdown("Combine clinical data + medical imaging for the most accurate diagnosis")
+    
+    st.info("💡 Upload medical images AND enter clinical data for comprehensive AI analysis with survival prediction and treatment recommendations")
+    
+    # Patient ID for tracking
+    col1, col2 = st.columns(2)
+    with col1:
+        patient_id = st.text_input("Patient ID", value=f"P{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}")
+    with col2:
+        patient_age = st.number_input("Patient Age", min_value=1, max_value=120, value=55)
+    
+    cancer_type_combined = st.selectbox("Cancer Type", ["Breast Cancer", "Lung Cancer"])
+    
+    # Tab layout for combined analysis
+    tab1, tab2, tab3 = st.tabs(["📊 Clinical Data", "📷 Medical Images", "🎯 Comprehensive Report"])
+    
+    # Initialize session state for combined analysis
+    if 'combined_clinical' not in st.session_state:
+        st.session_state.combined_clinical = None
+    if 'combined_images' not in st.session_state:
+        st.session_state.combined_images = []
+    if 'combined_image_results' not in st.session_state:
+        st.session_state.combined_image_results = []
+    
+    with tab1:
+        st.markdown("### Enter Clinical Measurements")
+        
+        if cancer_type_combined == "Breast Cancer":
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                radius_mean = st.number_input("Radius Mean", 5.0, 30.0, 14.0, 0.1, key="comb_radius")
+                texture_mean = st.number_input("Texture Mean", 5.0, 40.0, 19.0, 0.1, key="comb_texture")
+                perimeter_mean = st.number_input("Perimeter Mean", 40.0, 200.0, 92.0, 1.0, key="comb_perim")
+            with col2:
+                area_mean = st.number_input("Area Mean", 100.0, 2500.0, 655.0, 10.0, key="comb_area")
+                smoothness_mean = st.number_input("Smoothness Mean", 0.05, 0.20, 0.10, 0.001, key="comb_smooth")
+                compactness_mean = st.number_input("Compactness Mean", 0.01, 0.40, 0.10, 0.01, key="comb_compact")
+            with col3:
+                concavity_mean = st.number_input("Concavity Mean", 0.0, 0.50, 0.09, 0.01, key="comb_concave")
+                concave_points_mean = st.number_input("Concave Points Mean", 0.0, 0.20, 0.05, 0.01, key="comb_cpoints")
+                symmetry_mean = st.number_input("Symmetry Mean", 0.1, 0.4, 0.18, 0.01, key="comb_sym")
+            
+            if st.button("💾 Save Clinical Data"):
+                st.session_state.combined_clinical = {
+                    'radius_mean': radius_mean,
+                    'texture_mean': texture_mean,
+                    'perimeter_mean': perimeter_mean,
+                    'area_mean': area_mean,
+                    'smoothness_mean': smoothness_mean,
+                    'compactness_mean': compactness_mean,
+                    'concavity_mean': concavity_mean,
+                    'concave points_mean': concave_points_mean,
+                    'symmetry_mean': symmetry_mean
+                }
+                st.success("✅ Clinical data saved!")
+    
+    with tab2:
+        st.markdown("### Upload Medical Images")
+        uploaded_images = st.file_uploader("Upload one or more medical images", type=['png', 'jpg', 'jpeg', 'dcm'], accept_multiple_files=True, key="comb_images")
+        
+        if uploaded_images:
+            st.markdown(f"**{len(uploaded_images)} images uploaded**")
+            
+            cols = st.columns(min(len(uploaded_images), 3))
+            temp_images = []
+            
+            for idx, file in enumerate(uploaded_images):
+                # Handle DICOM
+                if file.name.endswith('.dcm'):
+                    img, metadata = DICOMLoader.load_dicom(file)
+                    if img:
+                        temp_images.append(img)
+                        with cols[idx % 3]:
+                            st.image(img, caption=f"DICOM {idx+1}", use_container_width=True)
+                            with st.expander("DICOM Metadata"):
+                                for k, v in metadata.items():
+                                    st.text(f"{k}: {v}")
+                else:
+                    img = Image.open(file)
+                    temp_images.append(img)
+                    with cols[idx % 3]:
+                        st.image(img, caption=f"Image {idx+1}", use_container_width=True)
+            
+            if st.button("🔍 Analyze All Images"):
+                st.session_state.combined_images = temp_images
+                st.session_state.combined_image_results = []
+                
+                progress_bar = st.progress(0)
+                for idx, img in enumerate(temp_images):
+                    with st.spinner(f"Analyzing image {idx+1}/{len(temp_images)}..."):
+                        enhanced = image_analyzer.enhance_medical_image(img)
+                        result = image_analyzer.analyze_image(enhanced, cancer_type_combined)
+                        st.session_state.combined_image_results.append(result)
+                    progress_bar.progress((idx + 1) / len(temp_images))
+                
+                st.success(f"✅ All {len(temp_images)} images analyzed!")
+    
+    with tab3:
+        if st.session_state.combined_clinical or st.session_state.combined_image_results:
+            st.markdown("### 🎯 Comprehensive Multi-Modal Analysis Report")
+            
+            # Aggregate results
+            clinical_prediction = None
+            if st.session_state.combined_clinical and cancer_type_combined == "Breast Cancer":
+                # Run ML prediction
+                features = st.session_state.combined_clinical
+                features['radius_texture_interaction'] = features['radius_mean'] * features['texture_mean']
+                features['area_perimeter_ratio'] = features['area_mean'] / (features['perimeter_mean'] + 1e-5)
+                
+                all_features = models_data['feature_names_breast']
+                feature_vector = pd.DataFrame([[features.get(f, 0) for f in all_features]], columns=all_features)
+                X_scaled = models_data['scaler_breast'].transform(feature_vector)
+                prediction = models_data['breast_model'].predict(X_scaled)[0]
+                probability = models_data['breast_model'].predict_proba(X_scaled)[0]
+                entropy = -np.sum(probability * np.log2(probability + 1e-10))
+                
+                clinical_prediction = {
+                    'diagnosis': "MALIGNANT" if prediction == 1 else "BENIGN",
+                    'probability': probability[1],
+                    'confidence': (1 - entropy),
+                    'entropy': entropy
+                }
+            
+            # Image analysis aggregate
+            image_summary = None
+            if st.session_state.combined_image_results:
+                valid_results = [r for r in st.session_state.combined_image_results if 'error' not in r]
+                if valid_results:
+                    avg_malignancy = np.mean([r.get('malignancy_probability', 0) for r in valid_results])
+                    stages = [r.get('stage', 'Unknown') for r in valid_results]
+                    most_common_stage = max(set(stages), key=stages.count) if stages else 'Unknown'
+                    
+                    image_summary = {
+                        'avg_malignancy': avg_malignancy,
+                        'stage': most_common_stage,
+                        'num_images': len(valid_results)
+                    }
+            
+            # Display combined metrics
+            st.markdown("#### 🎯 Integrated Analysis")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                if clinical_prediction:
+                    st.metric("Clinical Model", clinical_prediction['diagnosis'], 
+                             f"{clinical_prediction['probability']*100:.1f}% confidence")
+            
+            with col2:
+                if image_summary:
+                    st.metric("Imaging Analysis", f"{image_summary['avg_malignancy']*100:.1f}%",
+                             f"{image_summary['num_images']} images")
+            
+            with col3:
+                if clinical_prediction and image_summary:
+                    combined_prob = (clinical_prediction['probability'] + image_summary['avg_malignancy']) / 2
+                    st.metric("Combined Risk", f"{combined_prob*100:.1f}%", "Multi-modal")
+                    final_diagnosis = "MALIGNANT" if combined_prob > 0.5 else "BENIGN"
+                    final_stage = image_summary['stage']
+                elif clinical_prediction:
+                    combined_prob = clinical_prediction['probability']
+                    final_diagnosis = clinical_prediction['diagnosis']
+                    final_stage = "Unknown"
+                elif image_summary:
+                    combined_prob = image_summary['avg_malignancy']
+                    final_diagnosis = "MALIGNANT" if combined_prob > 0.5 else "BENIGN"
+                    final_stage = image_summary['stage']
+                else:
+                    combined_prob = 0.5
+                    final_diagnosis = "INSUFFICIENT DATA"
+                    final_stage = "Unknown"
+            
+            with col4:
+                if image_summary:
+                    st.metric("Cancer Stage", image_summary['stage'])
+            
+            # Survival Analysis
+            if final_stage != "Unknown":
+                st.markdown("---")
+                st.markdown("#### 📈 Survival Probability Analysis")
+                
+                survival_data = survival_calc.calculate_survival(
+                    cancer_type_combined,
+                    final_stage,
+                    age=patient_age
+                )
+                
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.metric("1-Year Survival", f"{survival_data['one_year_survival']*100:.1f}%")
+                with col2:
+                    st.metric("5-Year Survival", f"{survival_data['five_year_survival']*100:.1f}%")
+                with col3:
+                    st.metric("10-Year Survival", f"{survival_data['ten_year_survival']*100:.1f}%")
+                with col4:
+                    risk_cat = survival_data['risk_category']
+                    st.metric("Risk Category", risk_cat)
+                
+                # Survival curve visualization
+                years = np.array([0, 1, 2, 3, 4, 5, 7, 10])
+                survival_rates = np.array([
+                    1.0,
+                    survival_data['one_year_survival'],
+                    survival_data['one_year_survival'] - 0.05,
+                    survival_data['five_year_survival'] + 0.10,
+                    survival_data['five_year_survival'] + 0.05,
+                    survival_data['five_year_survival'],
+                    (survival_data['five_year_survival'] + survival_data['ten_year_survival']) / 2,
+                    survival_data['ten_year_survival']
+                ])
+                
+                fig_survival = go.Figure()
+                fig_survival.add_trace(go.Scatter(
+                    x=years,
+                    y=survival_rates * 100,
+                    mode='lines+markers',
+                    name='Survival Probability',
+                    line=dict(color='green', width=3),
+                    marker=dict(size=8)
+                ))
+                fig_survival.update_layout(
+                    title="Estimated Survival Curve",
+                    xaxis_title="Years Since Diagnosis",
+                    yaxis_title="Survival Probability (%)",
+                    yaxis=dict(range=[0, 100]),
+                    height=400
+                )
+                st.plotly_chart(fig_survival, use_container_width=True)
+            
+            # Treatment Pathway
+            if final_stage != "Unknown":
+                st.markdown("---")
+                st.markdown("#### 💊 Recommended Treatment Pathway")
+                
+                treatments = treatment_gen.generate_pathway(cancer_type_combined, final_stage)
+                
+                if treatments:
+                    treatment_df = pd.DataFrame(list(treatments.items()), columns=['Treatment Type', 'Recommendation'])
+                    
+                    # Color code based on treatment intensity
+                    def color_treatment(val):
+                        if 'not' in val.lower() or 'usually not' in val.lower():
+                            return 'background-color: #90EE90'
+                        elif 'may' in val.lower() or 'consider' in val.lower():
+                            return 'background-color: #FFE4B5'
+                        else:
+                            return 'background-color: #FFB6C1'
+                    
+                    styled_df = treatment_df.style.applymap(color_treatment, subset=['Recommendation'])
+                    st.dataframe(styled_df, use_container_width=True)
+            
+            # Download comprehensive report
+            st.markdown("---")
+            st.markdown("#### 📥 Export Comprehensive Report")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Generate enhanced PDF
+                patient_data_pdf = {
+                    'Patient ID': patient_id,
+                    'Age': patient_age,
+                    'Cancer Type': cancer_type_combined,
+                    'Analysis Date': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                }
+                
+                clinical_results_pdf = clinical_prediction if clinical_prediction else {}
+                image_results_pdf = image_summary if image_summary else {}
+                
+                pdf_data = enhanced_pdf.generate_comprehensive_report(
+                    patient_data_pdf,
+                    clinical_results=clinical_results_pdf,
+                    image_results=image_results_pdf,
+                    images=st.session_state.combined_images[:4] if st.session_state.combined_images else None
+                )
+                
+                st.download_button(
+                    label="📄 Download PDF Report",
+                    data=pdf_data,
+                    file_name=f"comprehensive_report_{patient_id}.pdf",
+                    mime="application/pdf"
+                )
+            
+            with col2:
+                # Save to patient history
+                if st.button("💾 Save to Patient History"):
+                    history_tracker.add_record(
+                        patient_id=patient_id,
+                        analysis_type="Combined Analysis",
+                        results={
+                            'clinical': clinical_prediction,
+                            'imaging': image_summary,
+                            'stage': final_stage,
+                            'diagnosis': final_diagnosis
+                        },
+                        images=st.session_state.combined_images
+                    )
+                    st.success(f"✅ Analysis saved for patient {patient_id}")
+        
+        else:
+            st.info("👆 Please enter clinical data and/or upload images in the tabs above to generate comprehensive analysis")
+
+elif app_mode == "📊 Patient History":
+    st.markdown("## 📊 Patient History & Temporal Analysis")
+    st.markdown("Track patient progress over time and compare imaging studies")
+    
+    if not st.session_state.patient_history:
+        st.info("No patient history available. Perform some analyses and save them to patient history first.")
+    else:
+        # Patient selector
+        patient_ids = list(set([r['patient_id'] for r in st.session_state.patient_history]))
+        selected_patient = st.selectbox("Select Patient", patient_ids)
+        
+        patient_records = history_tracker.get_patient_records(selected_patient)
+        
+        st.markdown(f"### Patient: {selected_patient}")
+        st.markdown(f"**Total Records:** {len(patient_records)}")
+        
+        # Timeline visualization
+        if len(patient_records) > 1:
+            st.markdown("#### 📈 Disease Progression Timeline")
+            
+            timestamps = [datetime.datetime.fromisoformat(r['timestamp']) for r in patient_records]
+            
+            # Extract risk scores if available
+            risk_scores = []
+            for r in patient_records:
+                if 'results' in r and isinstance(r['results'], dict):
+                    if 'clinical' in r['results'] and r['results']['clinical']:
+                        risk_scores.append(r['results']['clinical'].get('probability', 0.5) * 100)
+                    elif 'imaging' in r['results'] and r['results']['imaging']:
+                        risk_scores.append(r['results']['imaging'].get('avg_malignancy', 0.5) * 100)
+                    else:
+                        risk_scores.append(50)
+                else:
+                    risk_scores.append(50)
+            
+            fig_timeline = go.Figure()
+            fig_timeline.add_trace(go.Scatter(
+                x=timestamps,
+                y=risk_scores,
+                mode='lines+markers',
+                name='Malignancy Risk',
+                line=dict(color='red', width=2),
+                marker=dict(size=10)
+            ))
+            fig_timeline.update_layout(
+                title=f"Risk Score Over Time - Patient {selected_patient}",
+                xaxis_title="Date",
+                yaxis_title="Malignancy Risk (%)",
+                yaxis=dict(range=[0, 100]),
+                height=400
+            )
+            st.plotly_chart(fig_timeline, use_container_width=True)
+        
+        # Record details
+        st.markdown("#### 📋 Detailed Records")
+        for idx, record in enumerate(reversed(patient_records)):
+            with st.expander(f"Record {len(patient_records)-idx} - {record['timestamp'][:19]}"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write(f"**Analysis Type:** {record['analysis_type']}")
+                    st.write(f"**Has Images:** {'Yes' if record.get('has_images') else 'No'}")
+                with col2:
+                    if 'results' in record and record['results']:
+                        st.json(record['results'])
+        
+        # Export history
+        st.markdown("---")
+        excel_data = history_tracker.export_history_to_excel()
+        if excel_data:
+            st.download_button(
+                label="📊 Export All History to Excel",
+                data=excel_data,
+                file_name=f"patient_history_{datetime.datetime.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
 
 elif app_mode == "🌐 Federated Learning":
     st.markdown("## 🌐 Federated Learning Simulation")

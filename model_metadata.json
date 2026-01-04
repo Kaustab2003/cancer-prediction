@@ -1,19 +1,31 @@
 {
-  "creation_date": "2026-01-04T14:34:22.303313",
-  "breast_cancer_metrics": {
-    "accuracy": 0.9736842105263158,
-    "precision": 1.0,
-    "recall": 0.9285714285714286,
-    "f1": 0.9629629629629629,
-    "roc_auc": 0.9976851851851852
-  },
-  "lung_cancer_metrics": {
-    "accuracy": 0.9193548387096774,
-    "precision": 0.9803921568627451,
-    "recall": 0.9259259259259259,
-    "f1": 0.9523809523809523,
-    "roc_auc": 0.9513888888888888
-  },
-  "breast_samples": 569,
-  "lung_samples": 309
+  "categorical_features": [
+    "Smoking_History"
+  ],
+  "numerical_features": [
+    "Age",
+    "BMI",
+    "Biomarker_Alpha",
+    "Biomarker_Beta",
+    "Genetic_Risk_Score"
+  ],
+  "feature_names": [
+    "Age",
+    "BMI",
+    "Biomarker_Alpha",
+    "Biomarker_Beta",
+    "Genetic_Risk_Score",
+    "Smoking_History_Current",
+    "Smoking_History_Former",
+    "Smoking_History_Never"
+  ],
+  "model_version": "1.0.0",
+  "training_date": "2026-01-05T00:15:48.881780",
+  "training_samples": 2000,
+  "performance_metrics": {
+    "accuracy": 0.8875,
+    "roc_auc": 0.8926569638735812,
+    "cv_mean": 0.9237819909461701,
+    "cv_std": 0.03293178444790137
+  }
 }

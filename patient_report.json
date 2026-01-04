@@ -1,0 +1,23 @@
+{
+  "patient_id": "DEMO_001",
+  "timestamp": "2026-01-05T00:15:54.583143",
+  "model_version": "1.0.0",
+  "prediction": {
+    "diagnosis": "POSITIVE",
+    "probability": 0.9991254478961265,
+    "risk_level": "HIGH",
+    "confidence": "HIGH",
+    "uncertainty_score": 0.0070325874257540204
+  },
+  "recommendation": "\ud83d\udd34 Immediate consultation required. Biopsy and specialist referral recommended.",
+  "input_features": {
+    "patient_id": "DEMO_001",
+    "Age": 65,
+    "BMI": 28.5,
+    "Smoking_History": "Current",
+    "Biomarker_Alpha": 3.2,
+    "Biomarker_Beta": 12.5,
+    "Genetic_Risk_Score": 0.45
+  },
+  "disclaimer": "This is an AI-assisted prediction. Always consult healthcare professionals."
+}
