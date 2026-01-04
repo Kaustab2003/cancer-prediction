@@ -42,5 +42,9 @@ fpdf>=1.7.2
 ollama>=0.6.0
 httpx>=0.27.0
 
+# Image Processing & Computer Vision
+opencv-python>=4.8.0
+pytesseract>=0.3.10
+
 # Deployment
 docker>=6.0.0

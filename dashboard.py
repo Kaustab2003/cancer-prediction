@@ -24,6 +24,9 @@ import xgboost as xgb
 import lightgbm as lgb
 from imblearn.over_sampling import SMOTE
 import ollama
+from PIL import Image, ImageEnhance, ImageFilter
+import cv2
+import io
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -104,7 +107,7 @@ with st.sidebar:
     st.title("🎯 Control Panel")
     
     # App Mode Selection
-    app_mode = st.selectbox("Select Mode", ["🏥 Clinical Analysis", "🤖 Dr. AI Assistant", "🌐 Federated Learning"])
+    app_mode = st.selectbox("Select Mode", ["🏥 Clinical Analysis", "📸 Image Analysis", "🤖 Dr. AI Assistant", "🌐 Federated Learning"])
     
     st.markdown("---")
     
@@ -342,6 +345,234 @@ RESPONSE GUIDELINES:
             else:
                 return f"⚠️ Error communicating with Dr. AI: {error_msg}. Please try again or rephrase your question."
 
+# Medical Image Analyzer with Vision AI
+class MedicalImageAnalyzer:
+    def __init__(self):
+        self.vision_model = "llava:7b"
+        self.ollama_available = True
+        
+        # Test Ollama connection
+        try:
+            ollama.list()
+        except Exception as e:
+            self.ollama_available = False
+            st.warning(f"⚠️ Ollama not running for image analysis. Error: {str(e)}")
+    
+    def enhance_medical_image(self, image):
+        """Enhance medical image quality for better analysis"""
+        # Convert PIL to OpenCV format
+        img_array = np.array(image)
+        
+        # Convert to grayscale if needed
+        if len(img_array.shape) == 2:
+            gray = img_array
+        else:
+            gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+        
+        # Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        enhanced = clahe.apply(gray)
+        
+        # Denoise
+        denoised = cv2.fastNlMeansDenoising(enhanced, None, 10, 7, 21)
+        
+        # Convert back to PIL
+        if len(img_array.shape) == 3:
+            # Convert back to color
+            enhanced_img = cv2.cvtColor(denoised, cv2.COLOR_GRAY2RGB)
+        else:
+            enhanced_img = denoised
+        
+        return Image.fromarray(enhanced_img)
+    
+    def analyze_image(self, image, cancer_type="general"):
+        """Analyze medical image using LLaVA vision model"""
+        if not self.ollama_available:
+            return {"error": "Ollama not available"}
+        
+        try:
+            # Save image to bytes for Ollama
+            img_byte_arr = io.BytesIO()
+            image.save(img_byte_arr, format='PNG')
+            img_byte_arr = img_byte_arr.getvalue()
+            
+            # Comprehensive medical imaging prompt
+            prompt = f"""You are an expert radiologist and oncologist analyzing a {cancer_type} medical image.
+
+COMPREHENSIVE ANALYSIS REQUIRED:
+
+1. IMAGE TYPE & QUALITY:
+   - Identify imaging modality (X-ray, CT, MRI, Ultrasound, Pathology slide, etc.)
+   - Assess image quality and clarity
+   
+2. TUMOR CHARACTERISTICS:
+   - Location and anatomical region
+   - Size estimation (in cm if visible)
+   - Shape and margins (well-defined/irregular/spiculated)
+   - Density/Intensity (compared to surrounding tissue)
+   - Homogeneity (uniform or heterogeneous)
+   
+3. MALIGNANCY INDICATORS:
+   - Probability of being BENIGN vs MALIGNANT (give percentage)
+   - Specific features suggesting malignancy:
+     * Irregular borders
+     * Heterogeneous texture
+     * Calcifications pattern
+     * Necrosis or hemorrhage
+     * Surrounding tissue invasion
+   
+4. STAGING ASSESSMENT (TNM system):
+   - T (Tumor size): T0, T1, T2, T3, or T4
+   - N (Lymph Nodes): N0, N1, N2, or N3 (if visible)
+   - M (Metastasis): Evidence of spread to other organs
+   - Overall Stage: 0, I, II, III, or IV
+   
+5. AFFECTED BODY REGIONS:
+   - Primary site
+   - Nearby structures involved
+   - Potential metastatic sites visible
+   
+6. DIFFERENTIAL DIAGNOSIS:
+   - Most likely diagnosis
+   - Alternative possibilities
+   
+7. RECOMMENDATIONS:
+   - Additional imaging needed
+   - Biopsy recommendation
+   - Urgency level (routine/urgent/emergency)
+   - Follow-up timeline
+
+Please provide a detailed, structured analysis. Be specific with measurements and probabilities."""
+
+            # Call LLaVA vision model
+            response = ollama.chat(
+                model=self.vision_model,
+                messages=[{
+                    'role': 'user',
+                    'content': prompt,
+                    'images': [img_byte_arr]
+                }]
+            )
+            
+            analysis_text = response['message']['content']
+            
+            # Parse the analysis to extract key metrics
+            parsed_results = self._parse_analysis(analysis_text)
+            parsed_results['full_analysis'] = analysis_text
+            
+            return parsed_results
+            
+        except Exception as e:
+            return {"error": str(e)}
+    
+    def _parse_analysis(self, text):
+        """Extract structured data from analysis text"""
+        results = {
+            'malignancy_probability': 0.0,
+            'diagnosis': 'Unknown',
+            'stage': 'Unknown',
+            'tumor_size': 'Not specified',
+            'affected_regions': [],
+            'urgency': 'routine',
+            'recommendations': []
+        }
+        
+        text_lower = text.lower()
+        
+        # Extract malignancy probability
+        if 'malignant' in text_lower:
+            # Look for percentages
+            import re
+            percentages = re.findall(r'(\d+)%', text)
+            if percentages:
+                results['malignancy_probability'] = float(percentages[0]) / 100
+            elif 'high' in text_lower or 'likely malignant' in text_lower:
+                results['malignancy_probability'] = 0.75
+            elif 'suspicious' in text_lower:
+                results['malignancy_probability'] = 0.6
+            else:
+                results['malignancy_probability'] = 0.5
+        
+        # Extract stage
+        stage_patterns = [r'stage\s+(iv|iii|ii|i|0|four|three|two|one)', r'(t[0-4])', r'stage:\s*(\w+)']
+        for pattern in stage_patterns:
+            import re
+            match = re.search(pattern, text_lower)
+            if match:
+                stage_text = match.group(1)
+                if stage_text in ['iv', 'four', 't4']:
+                    results['stage'] = 'Stage IV'
+                elif stage_text in ['iii', 'three', 't3']:
+                    results['stage'] = 'Stage III'
+                elif stage_text in ['ii', 'two', 't2']:
+                    results['stage'] = 'Stage II'
+                elif stage_text in ['i', 'one', 't1']:
+                    results['stage'] = 'Stage I'
+                elif stage_text in ['0', 't0']:
+                    results['stage'] = 'Stage 0'
+                break
+        
+        # Extract diagnosis
+        if 'malignant' in text_lower:
+            results['diagnosis'] = 'Malignant'
+        elif 'benign' in text_lower:
+            results['diagnosis'] = 'Benign'
+        elif 'suspicious' in text_lower:
+            results['diagnosis'] = 'Suspicious'
+        
+        # Extract urgency
+        if any(word in text_lower for word in ['emergency', 'immediate', 'urgent']):
+            results['urgency'] = 'urgent'
+        elif 'routine' in text_lower or 'follow' in text_lower:
+            results['urgency'] = 'routine'
+        
+        # Extract tumor size
+        import re
+        size_match = re.search(r'(\d+\.?\d*)\s*(cm|mm)', text_lower)
+        if size_match:
+            results['tumor_size'] = f"{size_match.group(1)} {size_match.group(2)}"
+        
+        return results
+    
+    def generate_staging_visualization(self, stage, malignancy_prob):
+        """Create visual representation of cancer staging"""
+        stages = ['Stage 0', 'Stage I', 'Stage II', 'Stage III', 'Stage IV']
+        
+        # Determine current stage index
+        if stage in stages:
+            current_stage_idx = stages.index(stage)
+        else:
+            current_stage_idx = 2  # Default to Stage II if unknown
+        
+        # Create staging diagram
+        fig = go.Figure()
+        
+        # Add stage progression bars
+        colors = ['green', 'lightgreen', 'yellow', 'orange', 'red']
+        for i, (stage_name, color) in enumerate(zip(stages, colors)):
+            fig.add_trace(go.Bar(
+                x=[1],
+                y=[stage_name],
+                orientation='h',
+                marker=dict(
+                    color=color if i == current_stage_idx else 'lightgray',
+                    line=dict(color='black' if i == current_stage_idx else 'gray', width=3 if i == current_stage_idx else 1)
+                ),
+                name=stage_name,
+                showlegend=False
+            ))
+        
+        fig.update_layout(
+            title=f"Cancer Staging: {stage}",
+            xaxis_title="",
+            yaxis_title="Stage",
+            height=300,
+            xaxis=dict(showticklabels=False),
+            barmode='overlay'
+        )
+        
+        return fig
+
 # Federated Learning Simulator
 class FederatedLearningSimulator:
     def __init__(self):
@@ -408,6 +639,7 @@ class PDFReportGenerator(FPDF):
 # Initialize classes unconditionally
 audit = BlockchainAuditTrail()
 dr_ai = DrAI()
+image_analyzer = MedicalImageAnalyzer()
 fl_sim = FederatedLearningSimulator()
 pdf_gen = PDFReportGenerator()
 
@@ -981,6 +1213,286 @@ System: Multi-Cancer AI v2.0 | Powered by Advanced ML
                 file_name=f"audit_trail_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
                 mime="text/csv"
             )
+
+elif app_mode == "📸 Image Analysis":
+    st.markdown("## 📸 Medical Image Analysis with AI Vision")
+    st.markdown("Upload cancer imaging (X-ray, CT, MRI, Pathology) or medical reports for AI-powered analysis")
+    
+    # Create tabs for different image types
+    tab1, tab2, tab3 = st.tabs(["📷 Single Image", "🖼️ Multiple Images", "📄 Medical Report"])
+    
+    with tab1:
+        st.markdown("### Upload Medical Image")
+        st.info("💡 Supported: X-ray, CT scan, MRI, Ultrasound, Pathology slides, Mammograms")
+        
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            cancer_type_img = st.selectbox("Cancer Type", ["Breast Cancer", "Lung Cancer", "General"])
+            uploaded_file = st.file_uploader("Choose an image...", type=['png', 'jpg', 'jpeg', 'dcm', 'tiff'])
+            
+            enhance_image = st.checkbox("🔧 Enhance Image Quality", value=True, help="Apply CLAHE and denoising for better analysis")
+            
+        if uploaded_file is not None:
+            # Display original image
+            image = Image.open(uploaded_file)
+            
+            with col1:
+                st.markdown("#### Original Image")
+                st.image(image, use_container_width=True)
+            
+            # Process and analyze
+            if enhance_image:
+                with st.spinner("Enhancing image..."):
+                    enhanced_img = image_analyzer.enhance_medical_image(image)
+                with col2:
+                    st.markdown("#### Enhanced Image")
+                    st.image(enhanced_img, use_container_width=True)
+                analysis_image = enhanced_img
+            else:
+                analysis_image = image
+            
+            # Analyze button
+            if st.button("🔍 Analyze Image", key="analyze_single"):
+                with st.spinner("🔬 AI Vision analyzing medical image... This may take 30-60 seconds..."):
+                    results = image_analyzer.analyze_image(analysis_image, cancer_type_img)
+                
+                if 'error' in results:
+                    st.error(f"❌ Analysis failed: {results['error']}")
+                else:
+                    st.markdown("---")
+                    st.markdown("## 📊 AI Analysis Results")
+                    
+                    # Key metrics in columns
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        diagnosis = results.get('diagnosis', 'Unknown')
+                        color = "red" if diagnosis == "Malignant" else "green" if diagnosis == "Benign" else "orange"
+                        st.markdown(f"### Diagnosis")
+                        st.markdown(f"<h2 style='color: {color};'>{diagnosis}</h2>", unsafe_allow_html=True)
+                    
+                    with col2:
+                        malignancy_prob = results.get('malignancy_probability', 0) * 100
+                        st.metric("Malignancy Risk", f"{malignancy_prob:.1f}%")
+                    
+                    with col3:
+                        stage = results.get('stage', 'Unknown')
+                        st.metric("Cancer Stage", stage)
+                    
+                    with col4:
+                        tumor_size = results.get('tumor_size', 'Not specified')
+                        st.metric("Tumor Size", tumor_size)
+                    
+                    # Malignancy gauge
+                    st.markdown("### 🎯 Malignancy Risk Assessment")
+                    fig_gauge = go.Figure(go.Indicator(
+                        mode="gauge+number+delta",
+                        value=malignancy_prob,
+                        domain={'x': [0, 1], 'y': [0, 1]},
+                        title={'text': "Malignancy Probability"},
+                        delta={'reference': 50},
+                        gauge={
+                            'axis': {'range': [None, 100]},
+                            'bar': {'color': "darkred" if malignancy_prob > 70 else "orange" if malignancy_prob > 40 else "green"},
+                            'steps': [
+                                {'range': [0, 40], 'color': "lightgreen"},
+                                {'range': [40, 70], 'color': "yellow"},
+                                {'range': [70, 100], 'color': "lightcoral"}
+                            ],
+                            'threshold': {
+                                'line': {'color': "red", 'width': 4},
+                                'thickness': 0.75,
+                                'value': 85
+                            }
+                        }
+                    ))
+                    fig_gauge.update_layout(height=300)
+                    st.plotly_chart(fig_gauge, use_container_width=True)
+                    
+                    # Staging visualization
+                    col1, col2 = st.columns([1, 1])
+                    
+                    with col1:
+                        st.markdown("### 📊 Cancer Staging")
+                        fig_stage = image_analyzer.generate_staging_visualization(stage, malignancy_prob/100)
+                        st.plotly_chart(fig_stage, use_container_width=True)
+                    
+                    with col2:
+                        st.markdown("### ⚕️ Clinical Information")
+                        st.markdown(f"""
+                        <div style='background-color: rgba(38, 39, 48, 0.8); padding: 20px; border-radius: 10px;'>
+                            <h4>Urgency Level: <span style='color: {"red" if results.get("urgency") == "urgent" else "green"};'>{results.get('urgency', 'routine').upper()}</span></h4>
+                            <p><strong>Stage:</strong> {stage}</p>
+                            <p><strong>Tumor Size:</strong> {tumor_size}</p>
+                            <p><strong>Diagnosis:</strong> {diagnosis}</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Full detailed analysis
+                    st.markdown("### 📋 Detailed AI Analysis Report")
+                    with st.expander("View Complete Analysis", expanded=True):
+                        st.markdown(results.get('full_analysis', 'No detailed analysis available'))
+                    
+                    # Body regions affected (if extractable)
+                    if results.get('affected_regions'):
+                        st.markdown("### 🫁 Affected Body Regions")
+                        for region in results['affected_regions']:
+                            st.markdown(f"- {region}")
+                    
+                    # Recommendations
+                    st.markdown("### 💡 Recommendations")
+                    urgency = results.get('urgency', 'routine')
+                    if urgency == 'urgent' or malignancy_prob > 70:
+                        st.error("⚠️ **URGENT**: Immediate oncologist consultation recommended")
+                        st.markdown("- Schedule biopsy within 1-2 weeks")
+                        st.markdown("- Consider additional imaging (PET-CT if not done)")
+                        st.markdown("- Tumor board review")
+                    elif malignancy_prob > 40:
+                        st.warning("⚠️ **MODERATE RISK**: Follow-up recommended")
+                        st.markdown("- Schedule consultation within 2-4 weeks")
+                        st.markdown("- Additional diagnostic tests may be needed")
+                        st.markdown("- Monitor symptoms closely")
+                    else:
+                        st.success("✅ **LOW RISK**: Routine monitoring")
+                        st.markdown("- Continue regular screening schedule")
+                        st.markdown("- Annual follow-up imaging")
+                        st.markdown("- Maintain healthy lifestyle")
+                    
+                    # Download report
+                    st.markdown("---")
+                    report_text = f"""
+╔═══════════════════════════════════════════════════════════════╗
+║           MEDICAL IMAGE AI ANALYSIS REPORT                    ║
+╚═══════════════════════════════════════════════════════════════╝
+
+REPORT INFORMATION:
+  Report ID: {hashlib.sha256(str(datetime.datetime.now()).encode()).hexdigest()[:12]}
+  Analysis Date: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+  Cancer Type: {cancer_type_img}
+
+AI ANALYSIS RESULTS:
+  Diagnosis: {diagnosis}
+  Malignancy Probability: {malignancy_prob:.1f}%
+  Cancer Stage: {stage}
+  Tumor Size: {tumor_size}
+  Urgency Level: {urgency.upper()}
+
+DETAILED FINDINGS:
+{results.get('full_analysis', 'N/A')}
+
+RECOMMENDATIONS:
+  {'URGENT oncologist consultation required' if urgency == 'urgent' else 'Follow-up recommended' if malignancy_prob > 40 else 'Routine monitoring'}
+
+═══════════════════════════════════════════════════════════════
+AI Vision System: LLaVA 7B | Multi-Cancer Analysis Platform
+⚠️ DISCLAIMER: This AI analysis is for research purposes only.
+Always consult qualified healthcare professionals for diagnosis.
+                    """
+                    st.download_button(
+                        label="📥 Download Analysis Report",
+                        data=report_text,
+                        file_name=f"image_analysis_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.txt",
+                        mime="text/plain"
+                    )
+    
+    with tab2:
+        st.markdown("### Upload Multiple Images")
+        st.info("💡 Upload multiple views or timepoints for comprehensive analysis")
+        
+        uploaded_files = st.file_uploader("Choose images...", type=['png', 'jpg', 'jpeg'], accept_multiple_files=True)
+        
+        if uploaded_files and len(uploaded_files) > 0:
+            st.markdown(f"**{len(uploaded_files)} images uploaded**")
+            
+            # Display thumbnails
+            cols = st.columns(min(len(uploaded_files), 4))
+            images = []
+            for idx, file in enumerate(uploaded_files):
+                img = Image.open(file)
+                images.append(img)
+                with cols[idx % 4]:
+                    st.image(img, caption=f"Image {idx+1}", use_container_width=True)
+            
+            if st.button("🔍 Analyze All Images", key="analyze_multi"):
+                results_list = []
+                progress_bar = st.progress(0)
+                
+                for idx, img in enumerate(images):
+                    with st.spinner(f"Analyzing image {idx+1}/{len(images)}..."):
+                        result = image_analyzer.analyze_image(img, "General")
+                        results_list.append(result)
+                    progress_bar.progress((idx + 1) / len(images))
+                
+                st.markdown("---")
+                st.markdown("## 📊 Multi-Image Analysis Summary")
+                
+                # Aggregate results
+                avg_malignancy = np.mean([r.get('malignancy_probability', 0) for r in results_list if 'error' not in r]) * 100
+                stages = [r.get('stage', 'Unknown') for r in results_list if 'error' not in r]
+                most_common_stage = max(set(stages), key=stages.count) if stages else 'Unknown'
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("Average Malignancy Risk", f"{avg_malignancy:.1f}%")
+                with col2:
+                    st.metric("Most Common Stage", most_common_stage)
+                with col3:
+                    st.metric("Images Analyzed", len([r for r in results_list if 'error' not in r]))
+                
+                # Individual results
+                st.markdown("### Individual Image Results")
+                for idx, result in enumerate(results_list):
+                    if 'error' not in result:
+                        with st.expander(f"Image {idx+1} Analysis"):
+                            st.markdown(result.get('full_analysis', 'No analysis'))
+    
+    with tab3:
+        st.markdown("### Upload Medical Report (PDF/Image)")
+        st.info("💡 Upload scanned medical reports, pathology reports, or discharge summaries")
+        
+        report_file = st.file_uploader("Choose report file...", type=['pdf', 'png', 'jpg', 'jpeg'])
+        
+        if report_file is not None:
+            # Display the report
+            if report_file.type == 'application/pdf':
+                st.warning("📄 PDF uploaded - Showing first page as image for analysis")
+                # For PDF, you'd need pdf2image library, simplified here
+                st.markdown("*Note: For best results, convert PDF to image first*")
+            else:
+                report_img = Image.open(report_file)
+                st.image(report_img, caption="Medical Report", use_container_width=True)
+                
+                if st.button("📖 Analyze Report", key="analyze_report"):
+                    with st.spinner("🔬 AI reading and analyzing medical report..."):
+                        # Use vision model to read the report
+                        prompt_override = """Analyze this medical report document. Extract:
+1. Patient demographics
+2. Diagnosis and findings
+3. Test results and values
+4. Staging information
+5. Treatment recommendations
+6. Follow-up plans
+Provide a structured summary."""
+                        
+                        img_byte_arr = io.BytesIO()
+                        report_img.save(img_byte_arr, format='PNG')
+                        img_byte_arr = img_byte_arr.getvalue()
+                        
+                        try:
+                            response = ollama.chat(
+                                model=image_analyzer.vision_model,
+                                messages=[{
+                                    'role': 'user',
+                                    'content': prompt_override,
+                                    'images': [img_byte_arr]
+                                }]
+                            )
+                            
+                            st.markdown("### 📋 Report Analysis")
+                            st.markdown(response['message']['content'])
+                        except Exception as e:
+                            st.error(f"Error analyzing report: {str(e)}")
 
 elif app_mode == "🤖 Dr. AI Assistant":
     st.markdown("## 🤖 Dr. AI - Intelligent Medical Assistant")
