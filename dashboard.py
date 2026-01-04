@@ -23,6 +23,7 @@ from sklearn.model_selection import train_test_split
 import xgboost as xgb
 import lightgbm as lgb
 from imblearn.over_sampling import SMOTE
+import ollama
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -98,7 +99,8 @@ st.markdown('<p class="subtitle">Patent-Worthy • Explainable • Uncertainty-A
 
 # Sidebar
 with st.sidebar:
-    st.image("https://img.icons8.com/fluency/96/000000/dna.png", width=80)
+    # Replaced external image with a stable emoji to prevent load errors
+    st.markdown("<div style='text-align: center; font-size: 80px;'>🧬</div>", unsafe_allow_html=True)
     st.title("🎯 Control Panel")
     
     # App Mode Selection
@@ -181,49 +183,164 @@ class BlockchainAuditTrail:
         st.session_state.audit_chain.append(block)
         return block
 
-# Dr. AI Assistant Class
+# Medical Knowledge Base
+MEDICAL_KNOWLEDGE_BASE = """
+# BREAST CANCER CLINICAL KNOWLEDGE
+
+## Risk Factors:
+- Age >50 years
+- Family history of breast or ovarian cancer (BRCA1/BRCA2 mutations)
+- Dense breast tissue
+- Early menstruation (<12 years) or late menopause (>55 years)
+- Nulliparity or first pregnancy after age 30
+- Hormone replacement therapy
+- Alcohol consumption, obesity, sedentary lifestyle
+
+## Key Diagnostic Features:
+- Tumor Size & Shape: Irregular margins, larger size correlates with malignancy
+- Texture: Heterogeneous or coarse texture is concerning
+- Concavity/Concave Points: Indentations suggest invasive growth
+- Perimeter & Area: Larger values indicate aggressive tumors
+- Symmetry: Asymmetry can indicate malignancy
+- Compactness: High values suggest irregular shape
+
+## Screening Recommendations:
+- Mammography: Annually for women 40+
+- Clinical Breast Exam: Every 1-3 years for ages 25-39, annually for 40+
+- MRI: For high-risk individuals (BRCA carriers)
+- Biopsy: Gold standard for diagnosis if suspicious findings
+
+## Treatment Options:
+- Stage 0-I: Lumpectomy + radiation or mastectomy
+- Stage II-III: Surgery + chemotherapy/hormone therapy
+- Stage IV: Systemic therapy (chemo, targeted, immunotherapy)
+
+# LUNG CANCER CLINICAL KNOWLEDGE
+
+## Risk Factors:
+- Smoking (85-90% of cases)
+- Secondhand smoke exposure
+- Radon gas exposure
+- Asbestos, arsenic, chromium exposure
+- Family history of lung cancer
+- Age >55 years
+- Chronic lung diseases (COPD, pulmonary fibrosis)
+
+## Symptoms:
+- Persistent cough, coughing up blood
+- Shortness of breath, wheezing
+- Chest pain that worsens with deep breathing
+- Hoarseness
+- Weight loss, fatigue
+- Recurrent respiratory infections
+- Swallowing difficulty (advanced)
+
+## Screening Recommendations:
+- Low-dose CT scan: Annually for high-risk (ages 50-80, 20+ pack-year smoking history)
+- Chest X-ray: Less sensitive, not recommended for screening
+- Sputum cytology: Limited use
+- Bronchoscopy/Biopsy: Diagnostic confirmation
+
+## Treatment Options:
+- Stage I-II: Surgical resection (lobectomy/pneumonectomy)
+- Stage III: Chemoradiation + possible surgery
+- Stage IV: Systemic therapy (chemotherapy, targeted therapy, immunotherapy)
+- Smoking cessation: Reduces risk by 30-50% within 10 years
+
+## Prognostic Factors:
+- Stage at diagnosis (most important)
+- Histologic type (small cell vs. non-small cell)
+- Performance status
+- Weight loss >10%
+- Molecular markers (EGFR, ALK, PD-L1)
+"""
+
+# Dr. AI Assistant Class with Ollama Integration
 class DrAI:
     def __init__(self):
-        self.responses = {
-            "high_risk": [
-                "Based on the analysis, the patient shows high-risk indicators. Immediate consultation with an oncologist is recommended.",
-                "The model has detected patterns strongly associated with malignancy. A biopsy should be considered.",
-                "High probability of positive diagnosis. Please prioritize this patient for further diagnostic imaging."
-            ],
-            "low_risk": [
-                "The analysis suggests a low risk profile. Routine screening is recommended.",
-                "No significant malignant patterns detected. Continue with standard annual check-ups.",
-                "The indicators are within normal ranges. Encourage the patient to maintain a healthy lifestyle."
-            ],
-            "uncertain": [
-                "The model is uncertain about this case (High Entropy). I recommend a human expert review.",
-                "There are conflicting signals in the data. Additional tests may be needed to clarify the diagnosis.",
-                "Confidence is low. Please verify the input data or consult a specialist."
-            ],
-            "explain": [
-                "SHAP values indicate that {feature} is the primary driver for this prediction.",
-                "The high value of {feature} significantly increased the risk score.",
-                "This prediction is heavily influenced by the patient's {feature}."
-            ]
-        }
+        self.model_name = "llama3.2:3b"
+        self.ollama_available = True
+        self.conversation_history = []
+        
+        # Test Ollama connection
+        try:
+            ollama.list()
+        except Exception as e:
+            self.ollama_available = False
+            st.warning(f"⚠️ Ollama not running. Please start Ollama service. Error: {str(e)}")
+    
+    def build_system_prompt(self, context):
+        """Build medical context for the AI"""
+        diagnosis = context.get('diagnosis', 'Unknown')
+        probability = context.get('probability', 0) * 100
+        top_feature = context.get('top_feature', 'N/A')
+        entropy = context.get('entropy', 0)
+        confidence = (1 - entropy) * 100
+        
+        system_prompt = f"""You are Dr. AI, an expert medical assistant specializing in cancer risk assessment and interpretation.
 
+CURRENT PATIENT ANALYSIS CONTEXT:
+- Diagnosis: {diagnosis}
+- Cancer Risk Probability: {probability:.1f}%
+- Key Contributing Factor: {top_feature}
+- Model Confidence: {confidence:.1f}%
+- Uncertainty Score (Entropy): {entropy:.3f}
+
+MEDICAL KNOWLEDGE BASE:
+{MEDICAL_KNOWLEDGE_BASE}
+
+YOUR ROLE:
+1. Answer questions about cancer risk factors, symptoms, and diagnostic features
+2. Explain the AI model's predictions in plain language
+3. Provide evidence-based medical guidance
+4. Use the medical knowledge base to support your answers
+5. ALWAYS recommend consulting qualified healthcare professionals for final decisions
+6. Be empathetic and clear, avoiding unnecessary medical jargon
+7. If uncertain, acknowledge limitations and suggest expert consultation
+
+RESPONSE GUIDELINES:
+- Keep answers concise (3-5 sentences unless detailed explanation requested)
+- Cite specific risk factors or diagnostic criteria when relevant
+- Use the patient's current analysis context when discussing their case
+- Include actionable recommendations when appropriate
+- Always add medical disclaimer for serious concerns
+"""
+        return system_prompt
+    
     def ask(self, query, context):
-        """Simulate an LLM response based on context"""
-        query = query.lower()
-        if "risk" in query:
-            if context.get('probability', 0) > 0.7:
-                return random.choice(self.responses["high_risk"])
+        """Query the Ollama LLM with medical context"""
+        if not self.ollama_available:
+            return "⚠️ Dr. AI is currently unavailable. Please ensure Ollama is running (open Ollama app or run 'ollama serve' in terminal)."
+        
+        try:
+            system_prompt = self.build_system_prompt(context)
+            
+            # Prepare messages
+            messages = [
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': query}
+            ]
+            
+            # Call Ollama
+            response = ollama.chat(
+                model=self.model_name,
+                messages=messages
+            )
+            
+            answer = response['message']['content']
+            
+            # Add medical disclaimer for high-risk scenarios
+            if context.get('probability', 0) > 0.7 and any(word in query.lower() for word in ['diagnosis', 'risk', 'cancer', 'treatment']):
+                answer += "\n\n⚠️ **Important:** This AI analysis is for informational purposes only. Please consult a qualified oncologist immediately for proper diagnosis and treatment planning."
+            
+            return answer
+            
+        except Exception as e:
+            error_msg = str(e)
+            if "connection" in error_msg.lower() or "refused" in error_msg.lower():
+                return "⚠️ Cannot connect to Ollama. Please ensure Ollama is running. Open the Ollama app or run 'ollama serve' in a terminal."
             else:
-                return random.choice(self.responses["low_risk"])
-        elif "why" in query or "explain" in query:
-            return random.choice(self.responses["explain"]).format(feature=context.get('top_feature', 'tumor size'))
-        elif "uncertain" in query or "confidence" in query:
-            if context.get('entropy', 0) > 0.5:
-                return random.choice(self.responses["uncertain"])
-            else:
-                return "The model is highly confident in this prediction."
-        else:
-            return "I am Dr. AI, your virtual assistant. You can ask me about the risk level, explanation of the result, or confidence of the model."
+                return f"⚠️ Error communicating with Dr. AI: {error_msg}. Please try again or rephrase your question."
 
 # Federated Learning Simulator
 class FederatedLearningSimulator:
@@ -871,17 +988,35 @@ elif app_mode == "🤖 Dr. AI Assistant":
     
     # Chat interface
     if "messages" not in st.session_state:
-        st.session_state.messages = []
+        st.session_state.messages = [
+            {"role": "assistant", "content": "Hello! I am Dr. AI. I can help you interpret the cancer risk analysis. Ask me about the diagnosis, risk factors, or model confidence."}
+        ]
 
+    # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # Suggested questions
+    st.markdown("### 💡 Suggested Questions")
+    col1, col2, col3 = st.columns(3)
+    if col1.button("What is the risk level?"):
+        st.session_state.messages.append({"role": "user", "content": "What is the risk level?"})
+        st.rerun()
+    if col2.button("Explain the prediction"):
+        st.session_state.messages.append({"role": "user", "content": "Explain the prediction"})
+        st.rerun()
+    if col3.button("How confident are you?"):
+        st.session_state.messages.append({"role": "user", "content": "How confident are you?"})
+        st.rerun()
+
+    # Chat input
     if prompt := st.chat_input("Ask Dr. AI..."):
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
+        st.rerun()
 
+    # Generate response if last message is from user
+    if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
         with st.chat_message("assistant"):
             # Context from last prediction if available
             context = st.session_state.get('last_prediction', {
@@ -892,7 +1027,7 @@ elif app_mode == "🤖 Dr. AI Assistant":
             
             with st.spinner("Dr. AI is thinking..."):
                 time.sleep(1) # Simulate thinking
-                response = dr_ai.ask(prompt, context)
+                response = dr_ai.ask(st.session_state.messages[-1]["content"], context)
                 st.markdown(response)
                 
         st.session_state.messages.append({"role": "assistant", "content": response})
