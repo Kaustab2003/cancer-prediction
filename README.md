@@ -1,15 +1,16 @@
-# 🧬 Advanced Cancer Prediction System
-## Patent-Worthy Hackathon-Winning Medical AI Platform
+# 🧬 Multi-Cancer AI Prediction System
+## GPU-Accelerated Deep Learning Platform for Cancer Detection
 
 <div align="center">
 
 ![License](https://img.shields.io/badge/License-MIT-blue.svg)
-![Python](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)
+![Python](https://img.shields.io/badge/Python-3.13%2B-brightgreen.svg)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.6.0-red.svg)
+![CUDA](https://img.shields.io/badge/CUDA-12.4-green.svg)
 ![ML](https://img.shields.io/badge/ML-Ensemble%20Learning-orange.svg)
 ![XAI](https://img.shields.io/badge/XAI-SHAP%20Enabled-purple.svg)
-![Federated](https://img.shields.io/badge/Federated-Learning%20Ready-red.svg)
 
-**Privacy-Preserving • Explainable • Uncertainty-Aware • Production-Ready**
+**GPU-Accelerated • Multi-Modal • Explainable • Privacy-Preserving • Production-Ready**
 
 </div>
 
@@ -19,67 +20,79 @@
 
 ### **Novel Innovations:**
 
-1. **🎯 Multi-Modal Data Integration**
-   - Combines **clinical features** (Age, BMI, Smoking History)
-   - **Biomarker data** (Alpha/Beta protein levels)
-   - **Genetic risk scoring** from genomic analysis
-   - Portable synthetic data generation for testing
+1. **🎯 Multi-Cancer Detection (4 Cancer Types)**
+   - **Breast Cancer**: Clinical data analysis (Ensemble ML)
+   - **Lung Cancer**: Survey-based risk assessment (LightGBM)
+   - **Skin Cancer**: Dermoscopy image analysis (EfficientNetB4, 7 classes)
+   - **Blood Cancer**: Microscopy image analysis (EfficientNetB3, 4 classes)
+   - Unified prediction pipeline with automatic model selection
 
-2. **🧠 Advanced Ensemble Architecture**
-   - Voting Classifier combining:
-     - Random Forest (100 estimators) - for robustness
-     - Gradient Boosting (100 estimators) - for precision
-   - Soft voting for probability-based predictions
-   - Achieves **>90% accuracy** with **>0.95 ROC-AUC**
+2. **🚀 GPU-Accelerated Deep Learning**
+   - **PyTorch 2.6.0** with CUDA 12.4 support
+   - Mixed precision training (FP16) for efficiency
+   - EfficientNet architectures for medical imaging
+   - Real-time inference on NVIDIA GPUs
 
-3. **🔍 Explainable AI (XAI)**
-   - **SHAP (SHapley Additive exPlanations)** integration
-   - Per-patient feature contribution analysis
-   - Global and local interpretability
-   - Builds trust with healthcare professionals
+3. **🏥 Clinical Decision Support**
+   - **TNM Staging System**: AJCC-compliant cancer staging
+   - **5-Year Survival Rates**: Evidence-based prognostic data
+   - **Risk Stratification**: Low/Moderate/High/Very High classification
+   - **Personalized Prevention**: Dynamic risk-based recommendations
 
-4. **🎲 Uncertainty Quantification**
-   - **Entropy-based** confidence scoring
-   - Automatic "human review needed" triggers for uncertain cases
-   - Risk-aware predictions with confidence levels
+4. **🔍 Explainable AI (XAI)**
+   - **SHAP** integration for clinical feature analysis
+   - Feature importance visualization
+   - Per-patient contribution analysis
+   - Transparent AI decision-making
 
-5. **🛡️ Federated Learning Simulation**
-   - Privacy-preserving distributed training
-   - Simulates 3-hospital federated learning
-   - No patient data leaves local nodes
-   - HIPAA/GDPR compliance architecture
+5. **🧬 Personalized Medicine**
+   - **Dynamic Risk Assessment**: Real-time risk scoring from patient data
+   - **Custom Recommendations**: BMI-specific, age-adjusted guidance
+   - **Evidence-Based Strategies**: WHO/ACS/NCCN guidelines
+   - **Patient-Specific Insights**: Targeted lifestyle modifications
 
-6. **📊 Dynamic Risk Stratification**
-   - Three-tier risk system: Low / Moderate / High
-   - Actionable clinical recommendations
-   - Automatic biopsy referral for high-risk cases
+6. **🎨 Professional Dashboard (7 Modes)**
+   - **Complete Diagnosis**: Unified clinical + image analysis
+   - **Clinical Analysis**: Breast/lung cancer prediction
+   - **Image Analysis**: Skin/blood cancer detection
+   - **Combined Analysis**: Multi-modal data fusion
+   - **Dr. AI Assistant**: LLM-powered medical Q&A
+   - **Patient History**: Temporal tracking
+   - **Federated Learning**: Privacy-preserving training simulation
 
-7. **🚀 Production-Ready API**
-   - Complete `CancerRiskPredictor` class
-   - Single and batch prediction support
-   - JSON report generation
-   - Deployment-ready architecture
+7. **🛡️ Privacy & Security**
+   - Blockchain audit trail for predictions
+   - Local processing (no cloud dependency)
+   - HIPAA/GDPR-compliant architecture
+   - Patient data anonymization
 
-8. **📈 Comprehensive Validation**
-   - 5-fold cross-validation
-   - ROC curves, Precision-Recall curves
+8. **📊 Comprehensive Validation**
+   - Training/validation curves
    - Confusion matrices
-   - Feature importance ranking
+   - GPU performance metrics
+   - Real-world testing on medical datasets
 
 ---
 
-## 📊 Performance Metrics
+## 📊 Model Performance
 
-| Model Component | Accuracy | ROC-AUC | Cross-Val Score | Status |
-|-----------------|----------|---------|-----------------|--------|
-| **Voting Ensemble** | >90% | >0.95 | High Stability | ✅ Production Ready |
-| **Random Forest** | Featured | Top-10 Importance | ✅ Analyzed |
-| **Gradient Boosting** | Featured | High Precision | ✅ Validated |
-| **Federated Learning** | Simulated | 3 Hospitals | ✅ Privacy-Preserved |
+| Cancer Type | Model Architecture | Dataset | Classes | GPU Training | Status |
+|-------------|-------------------|---------|---------|--------------|--------|
+| **Breast Cancer** | Stacking Ensemble (RF+GB+LGB) | Wisconsin Dataset | 2 | CPU | ✅ Production |
+| **Lung Cancer** | LightGBM Classifier | Survey Data | 2 | CPU | ✅ Production |
+| **Skin Cancer** | EfficientNetB4 (PyTorch) | HAM10000 | 7 | ✅ CUDA | ✅ Production |
+| **Blood Cancer** | EfficientNetB3 (PyTorch) | ALL Dataset | 4 | ✅ CUDA | ✅ Production |
 
----
+### Deep Learning Models
 
-## 🚀 Quick Start
+| Component | Specification | Performance |
+|-----------|--------------|-------------|
+| **Prerequisites
+
+- **Python**: 3.13+ (recommended)
+- **GPU** (optional): NVIDIA GPU with CUDA 12.4+ for accelerated inference
+- **RAM**: 8GB minimum, 16GB recommended
+- **Storage**: 2GB for models and datasets
 
 ### Installation
 
@@ -88,67 +101,152 @@
 git clone https://github.com/yourusername/multi-cancer-ai.git
 cd multi-cancer-ai
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
 # Install dependencies
 pip install -r requirements.txt
-```Main Notebook
-
-```bash
-jupyter notebook Advanced_Cancer_Prediction_System.ipynb
 ```
 
-Or open in VS Code with the Jupyter extension.
-
-### Optional: Running Legacy Dashboard
+### Running the Dashboard
 
 ```bash
+# Navigate to src folder
+cd src
+
+# Launch Streamlit dashboard
 streamlit run dashboard.py
 ```
 
 The dashboard will open in your browser at `http://localhost:8501`
 
-Or open in VS Code with the Jupyter extension.
+### Training Models (Optional)
 
----
+```bash
+# Navigate to scripts folder
+cd scripts
 
-## 📁 Project Structure
+# Train blood cancer model (GPU required)
+python train_blood_cancer_pytorch.py
 
-```
-cancer-prediction/
-│
-├── 📊 Data Files
-│   ├── breast-cancer.csv                       # Wisconsin Breast Cancer Dataset (optional)
-│   └── survey_lung_cancer.csv                  # Lung Cancer Survey Dataset (optional)
-│
-├── 📓 Notebooks
-│   ├── Advanced_Cancer_Prediction_System.ipynb # ⭐ Main Production Notebook
-│   ├── Multi_Cancer_AI_System.ipynb            # Legacy multi-cancer system
-│   └── Data Preprocessing Template.ipynb       # Data prep utilities
-│
-├── 🖥️ Applications
-│   └── dashboard.py                            # Streamlit demo dashboard
-│
-├── 📄 Configuration
-│   ├── requirements.txt                        # Python dependencies
-│   └── README.md                               # This file
-│
-└── 💾 Generated Files (after running notebook)
-    ├── cancer_risk_predictor_v1.pkl           # Trained model
-    ├── model_metadata.json                    # Performance metrics
-    └── patient_report.json                    # Sample prediction report
+# Train skin cancer model (GPU required)
+python train_skin_cancer_pytorch.py
 ```
 
----
+**Note**: Pre-trained models are included in `models/` folder
+### Optional: Running Legacy Dashboard
 
-## 🔬 Technical Architecture
-
-### Data Processing Pipeline
+```bash
+strea� src/                              # Source code (main application)
+│   ├── dashboard.py                     # 🎨 Streamlit dashboard (7 modes)
+│   ├── multi_cancer_pipeline.py         # 🧬 Unified prediction pipeline
+│   ├── cancer_staging.py                # 🏥 TNM staging & survival rates
+│   └── prevention_module.py             # 🛡️ Personalized recommendations
+│
+├── 📂 scripts/                          # Training scripts
+│   ├── train_blood_cancer_pytorch.py    # Train blood cancer model
+│   └── train_skin_cancer_pytorch.py     # Train skin cancer model
+│
+├── 📂 models/                           # Trained models (*.pth, *.pkl)
+│   ├── blood_cancer_efficientnet_pytorch_best.pth  # Blood cancer model
+│   ├── skin_cancer_efficientnet_pytorch_best.pth   # Skin cancer model
+│   ├── breast_model.pkl                 # Breast cancer model
+│   ├── lung_model.pkl                   # Lung cancer model
+│   └── *_preprocessor.pkl               # Data preprocessors
+│
+├── 📂 data/                             # Datasets
+│   ├── breast-cancer.csv                # Breast cancer dataset
+│   ├── survey_lung_cancer.csv           # Lung cancer dataset
+│   ├── HAM10000_metadata.csv            # Skin cancer metadata
+│   └── audit_trail.csv                  # Blockchain audit
+│
+├── 📂 outputs/                          # Training outputs
+│   ├── plots/                           # Confusion matrices, training curves
+│   ├── logs/                            # Training logs
+│   Multi-Cancer Prediction Pipeline
 
 ```
-Raw Data → Feature Engineering → Outlier Removal → SMOTE Resampling 
+Patient Data/Image → Cancer Type Detection → Model Selection 
+    → GPU/CPU Inference → Prediction + Confidence 
+    → TNM Staging (if applicable) → Risk Stratification 
+    → Personalized Recommendations → PDF Report Generation
+```
+
+### Model Architectures
+
+#### 1. **Image-Based Models (PyTorch + GPU)**
+
+**Blood Cancer Detection**
+```python
+EfficientNetB3(
+    num_classes=4,  # Benign, early Pre-B, Pre-B, Pro-B
+    pretrained=True,
+    input_size=224x224
+)
+# Training: Mixed precision (FP16), Data augmentation
+# Optimizer: AdamW with OneCycleLR scheduler
+# Device: CUDA-enabled GPU
+```
+
+**Skin Cancer Detection**
+```python
+EfficientNetB4(
+    num_classes=7,  # HAM10000 lesion types
+    pretrained=True,
+    input_size=224x224
+)
+# Training: Transfer learning from ImageNet
+# Augmentation: Rotation, flip, color jitter, cutout
+# Device: CUDA-enabled GPU
+```
+
+#### 2. **Clinical Models (Scikit-learn + CPU)**
+
+**Breast Cancer**
+```python
+StackingClassifier(
+    estimators=[
+        RandomForestClassifier(n_estimators=100),
+        GradientBoostingClassifier(n_estimators=100),
+        LGBMClassifier()
+    ],
+    final_estimator=LogisticRegression()
+)
+```
+
+**Lung Cancer**
+```python
+LGBMClassifier(
+    n_estimators=100,
+    learning_rate=0.05,
+    max_depth=7
+)
+```
+
+### TNM Staging Module
+
+```python
+CancerStaging.stage_cancer(
+    cancer_type='breast',  # breast, lung, skin, blood
+    tumor_size=3.5,        # cm
+    lymph_nodes=2,         # positive nodes
+    metastasis=False,
+    histologic_grade=2
+)
+# Returns: Stage, TNM classification, 5-year survival, risk level
+```
+
+### Personalized Prevention Module
+
+```python
+PreventionAdvisor.get_comprehensive_recommendations(
+    patient_data={
+        'age': 58,
+        'bmi': 32.5,
+        'smoking_status': 'never',
+        'family_history': True,
+        'alcohol_drinks_per_week': 10
+    },
+    cancer_type='breast'
+)
+# Returns: Risk score, personalized recommendations, priority actionser Removal → SMOTE Resampling 
 Synthetic Data Generation → ColumnTransformer (Scaling + OneHot) 
     → Train/Test Split → Ensemble Training → SHAP Analysis 
     → Uncertainty Quantification → Risk Stratification → API Deployment
@@ -274,15 +372,28 @@ lung_patient = pd.DataFrame({
 })
 
 # Predict
-prediction = models['lung_model'].predict(lung_patient)
-print(f"Lung Cancer Risk: {'Positive' if prediction[0] == 1 else 'Negative'}")
-```
+prediction = models['lung_model'].preradius, texture, perimeter, area, smoothness, etc.)
+- **Target:** Malignant (M) vs Benign (B)
+- **Model:** Stacking Ensemble (RF + GB + LightGBM)
 
----
+### 2. Lung Cancer Survey Dataset
+- **Source:** Kaggle
+- **Samples:** 309 patients
+- **Features:** Age, gender, smoking, symptoms, family history
+- **Target:** YES/NO diagnosis
+- **Model:** LightGBM Classifier
 
-## 🔍 Explainable AI Outputs
+### 3. HAM10000 Skin Lesion Dataset
+- **Source:** Harvard Dataverse / ISIC Archive
+- **Samples:** 10,015 dermoscopic images
+- **Classes:** 7 types (Melanoma, Basal Cell Carcinoma, Actinic Keratosis, etc.)
+- **Model:** EfficientNetB4 (PyTorch, GPU-accelerated)
 
-The system provides three levels of explainability:
+### 4. Blood Cell Cancer (ALL) Dataset
+- **Source:** Kaggle / Medical imaging repositories
+- **Samples:** Thousands of microscopy images
+- **Classes:** 4 types (Benign, early Pre-B, Pre-B, Pro-B)
+- **Model:** EfficientNetB3 (PyTorch, GPU-accelerated)
 
 1. **Global Explanations**
    - Feature importance rankings
@@ -426,19 +537,81 @@ We welcome contributions! Please see our contributing guidelines.
 
 ---
 
-## 📜 License
+## 🎨 Dashboard Features
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### 7 Integrated Modes
+
+1. **🏥 Complete Diagnosis** (PRIMARY MODE)
+   - Upload clinical data AND/OR medical images
+   - Supports all 4 cancer types
+   - TNM staging included
+   - Personalized prevention recommendations
+   - PDF report generation
+
+2. **🏥 Clinical Analysis**
+   - Breast cancer risk assessment
+   - Lung cancer prediction
+   - SHAP explainability
+   - Feature importance visualization
+Features Summary
+
+1. **Multi-Cancer Support**: 4 cancer types in one unified system
+2. **GPU Acceleration**: Real-time inference with CUDA-enabled PyTorch
+3. **Clinical Staging**: TNM classification with 5-year survival rates
+4. **Personalized Prevention**: Dynamic risk-based recommendations
+5. **Explainable AI**: SHAP values for transparent decision-making
+6. **Privacy-Preserving**: Blockchain audit trail, local processing
+7. **Production-Ready**: Professional dashboard with 7 modes
+8. **Medical-Grade**: Evidence-based algorithms, AJCC guidelines
+
+## 🚀 System Requirements
+
+### Minimum
+- **OS**: Windows 10/11, Linux, macOS
+- **Python**: 3.13+
+- **RAM**: 8GB
+- **Storage**: 2GB
+
+### Recommended (for GPU training)
+- **GPU**: NVIDIA GPU with 4GB+ VRAM
+- **CUDA**: 12.4+
+- **cuDNN**: 8.x
+- **RAM**: 16GB
+- **Storage**: 10GB (for datasets)
+   - Multi-modal data fusion
+   - Clinical + imaging integration
+   - Comprehensive risk assessment
+   - Survival prediction
+
+5. **🤖 Dr. AI Assistant**
+   - LLM-powered medical Q&A
+   - Context-aware responses
+   - Prediction interpretation
+   - Evidence-based guidance
+
+6. **📊 Patient History**
+   - Temporal tracking
+   - Longitudinal analysis
+   - Progress monitoring
+ GPU-Accelerated • Multi-Modal • Clinically Validated*
+
+**Built with ❤️ for the healthcare community**
 
 ---
 
-## 🙏 Acknowledgments
+### Quick Links
 
-- **Wisconsin Breast Cancer Dataset:** UCI Machine Learning Repository
-- **Lung Cancer Dataset:** Kaggle Community
-- **SHAP Library:** Scott Lundberg and team
-- **Scikit-learn:** Pedregosa et al.
-- **Streamlit:** Amazing framework for ML apps
+📖 [Documentation](PROJECT_STRUCTURE.md) • 🎯 [Dashboard Guide](DASHBOARD_GUIDE.md) • 📜 [Patent Claims](PATENT_CLAIMS.md)
+
+---
+
+**Last Updated**: January 6, 2026 | **Python**: 3.13+ | **PyTorch**: 2.6.0 | **CUDA**: 12.4
+
+7. **🌐 Federated Learning**
+   - Privacy-preserving training
+   - Multi-hospital simulation
+   - Decentralized architecture
+   - HIPAA compliance
 
 ---
 

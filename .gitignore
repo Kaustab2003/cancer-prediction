@@ -1,0 +1,126 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Model files (large files)
+*.pth
+*.h5
+*.hdf5
+*.pkl
+*.joblib
+*.ckpt
+*.weights
+
+# Data files (large datasets)
+*.csv
+*.xlsx
+*.xls
+*.json
+data/
+*.zip
+*.tar.gz
+*.rar
+
+# Image files
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.dcm
+
+# Logs and outputs
+logs/
+*.log
+outputs/
+results/
+
+# Medical imaging data
+Blood\ cell\ Cancer\ [ALL]/
+Skin\ Cancer/
+skin_cancer_processed/
+Preprocessed_Data/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+
+# System files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+
+# Docker
+*.dockerfile
+docker-compose.yml
+
+# Reports and exports
+*.pdf
+*.docx
+*.xlsx
+
+# Cache
+.cache/
+*.cache
+
+# Git
+.git/
+.gitattributes
+
+# Claude/AI
+.claude/
+
+# Streamlit
+.streamlit/
+
+# Keep these important files (exceptions)
+!requirements.txt
+!README.md
+!PATENT_CLAIMS.md
+!Dockerfile
